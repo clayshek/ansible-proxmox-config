@@ -1,0 +1,37 @@
+auto lo
+iface lo inet loopback
+
+iface eno1 inet manual
+
+iface eno2 inet manual
+
+iface eno3 inet manual
+
+iface eno4 inet manual
+
+auto bond0
+iface bond0 inet manual
+        bond-slaves eno1 eno2
+        bond-miimon 100
+        bond-mode balance-alb
+#Management & Guests Bond
+
+auto bond1
+iface bond1 inet static
+        address  {{ corosync_ips[ansible_facts['nodename']] }}
+        netmask  24
+        bond-slaves eno3 eno4
+        bond-miimon 100
+        bond-mode active-backup
+#Cluster Corosync
+
+auto vmbr0
+iface vmbr0 inet static
+        address  {{ mgmt_guest_ips[ansible_facts['nodename']] }}
+        netmask  24
+        gateway  192.168.2.1
+        bridge-ports bond0
+        bridge-stp off
+        bridge-fd 0
+#Management & Guests
+

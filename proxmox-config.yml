@@ -1,0 +1,66 @@
+# proxmox-config.yml
+# ansible-playbook -i inventory --ask-pass proxmox-config.yml
+# ansible-playbook -i inventory -l 192.168.1.32 --ask-pass proxmox-config.yml
+---
+- name: 'Configure Proxmox hosts and prep for Ansible automation'
+  hosts: 'proxmox'
+  gather_facts: true
+  vars:
+    packages:
+      - 'python-pip'
+      - 'python-dev'
+      - 'build-essential'
+      - 'mdadm'
+      - 'cifs-utils'
+    mgmt_guest_ips:
+      pve1: 192.168.2.31
+      pve2: 192.168.2.32
+      pve3: 192.168.2.33
+    corosync_ips:
+      pve1: 10.10.11.31
+      pve2: 10.10.11.32
+      pve3: 10.10.11.33  
+
+  tasks:
+    - name: 'Ensure enterprise repo file is not present'
+      file:
+        path: /etc/apt/sources.list.d/pve-enterprise.list
+        state: absent
+    - name: 'Switch to community repos'
+      apt_repository:
+        repo: 'deb http://download.proxmox.com/debian/pve stretch pve-no-subscription'
+        state: 'present'
+    - name: 'Enable nested virtualization'
+      template:
+        src: "templates/intel_nested_virtualization"
+        dest: /etc/modprobe.d/kvm-intel.conf  
+      register: nested_virt_require_reboot
+    - name: 'Install python-apt so native apt plugins work'
+      package:
+        name: 'python-apt'
+        state: 'present'
+    - name: 'Update all packages to the latest version'
+      apt:
+        upgrade: 'dist'
+    - name: 'Install pip packages'
+      apt:
+        name: "{{ packages }}"
+    - name: 'Pip update pip'
+      pip:
+        name: 'pip'
+        state: 'latest'
+    - name: 'Install Ansible Dependencies'
+#      pip:
+#        name: 'virtualenv'
+#        state: 'latest'
+      pip:
+        name: 'proxmoxer'
+        state: 'latest'
+    - name: 'Configure /etc/network/interfaces.new'
+      template:
+        src: "templates/interfaces"
+        dest: /etc/network/interfaces.new  
+      register: network_require_reboot      
+    - name: 'Reboot server'    
+      reboot:
+      when: nested_virt_require_reboot.changed or network_require_reboot.changed
