@@ -1,6 +1,6 @@
 # proxmox-config.yml
 # ansible-playbook -i inventory --ask-pass proxmox-config.yml
-# ansible-playbook -i inventory -l 192.168.1.32 --ask-pass proxmox-config.yml
+# ansible-playbook -i inventory -l 192.168.2.32 --ask-pass proxmox-config.yml
 ---
 - name: 'Configure Proxmox hosts and prep for Ansible automation'
   hosts: 'proxmox'
